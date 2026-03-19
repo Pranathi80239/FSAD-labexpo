@@ -1,0 +1,213 @@
+======================== BACKEND (Spring Boot) ========================
+
+--- Student.java (Entity) ---
+package com.example.student;
+
+import jakarta.persistence.*;
+
+@Entity
+public class Student {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    private String name;
+    private String email;
+    private String course;
+
+    public Student() {}
+
+    public Student(String name, String email, String course) {
+        this.name = name;
+        this.email = email;
+        this.course = course;
+    }
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getCourse() { return course; }
+    public void setCourse(String course) { this.course = course; }
+}
+
+--- StudentRepository.java ---
+package com.example.student;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface StudentRepository extends JpaRepository<Student, Integer> {
+}
+
+--- StudentService.java ---
+package com.example.student;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.*;
+
+@Service
+public class StudentService {
+
+    @Autowired
+    private StudentRepository repo;
+
+    public Student addStudent(Student student) {
+        return repo.save(student);
+    }
+
+    public List<Student> getAllStudents() {
+        return repo.findAll();
+    }
+
+    public Student updateStudent(int id, Student student) {
+        student.setId(id);
+        return repo.save(student);
+    }
+
+    public void deleteStudent(int id) {
+        repo.deleteById(id);
+    }
+}
+
+--- StudentController.java ---
+package com.example.student;
+
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.*;
+
+@RestController
+@RequestMapping("/students")
+@CrossOrigin(origins = "*")
+public class StudentController {
+
+    @Autowired
+    private StudentService service;
+
+    @PostMapping
+    public ResponseEntity<Student> addStudent(@RequestBody Student student) {
+        return new ResponseEntity<>(service.addStudent(student), HttpStatus.CREATED);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Student>> getAll() {
+        return new ResponseEntity<>(service.getAllStudents(), HttpStatus.OK);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Student> update(@PathVariable int id, @RequestBody Student student) {
+        return new ResponseEntity<>(service.updateStudent(id, student), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> delete(@PathVariable int id) {
+        service.deleteStudent(id);
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
+    }
+}
+
+======================== FRONTEND (React) ========================
+
+--- App.jsx ---
+import React from "react";
+import StudentList from "./StudentList";
+
+function App() {
+  return <StudentList />;
+}
+
+export default App;
+
+--- StudentList.jsx ---
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+function StudentList() {
+  const [students, setStudents] = useState([]);
+  const [form, setForm] = useState({ name: "", email: "", course: "" });
+  const [editId, setEditId] = useState(null);
+
+  const API = "http://localhost:8080/students";
+
+  const fetchStudents = () => {
+    axios.get(API).then(res => setStudents(res.data));
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const addOrUpdate = () => {
+    if (editId) {
+      axios.put(`${API}/${editId}`, form).then(() => {
+        setEditId(null);
+        setForm({ name: "", email: "", course: "" });
+        fetchStudents();
+      });
+    } else {
+      axios.post(API, form).then(() => {
+        setForm({ name: "", email: "", course: "" });
+        fetchStudents();
+      });
+    }
+  };
+
+  const deleteStudent = (id) => {
+    axios.delete(`${API}/${id}`).then(fetchStudents);
+  };
+
+  const editStudent = (student) => {
+    setForm(student);
+    setEditId(student.id);
+  };
+
+  return (
+    <div>
+      <h2>Student Management</h2>
+
+      <input name="name" placeholder="Name" value={form.name} onChange={handleChange} />
+      <input name="email" placeholder="Email" value={form.email} onChange={handleChange} />
+      <input name="course" placeholder="Course" value={form.course} onChange={handleChange} />
+      <button onClick={addOrUpdate}>{editId ? "Update" : "Add"}</button>
+
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Course</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {students.map(s => (
+            <tr key={s.id}>
+              <td>{s.name}</td>
+              <td>{s.email}</td>
+              <td>{s.course}</td>
+              <td>
+                <button onClick={() => editStudent(s)}>Edit</button>
+                <button onClick={() => deleteStudent(s.id)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default StudentList;
