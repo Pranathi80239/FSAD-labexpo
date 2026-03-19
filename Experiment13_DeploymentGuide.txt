@@ -1,0 +1,143 @@
+==================== EXPERIMENT 13 ====================
+DEPLOYMENT OF FULL-STACK APPLICATION (SPRING BOOT + REACT)
+
+==================== STEP 1: REACT PRODUCTION BUILD ====================
+
+Open terminal inside frontend folder:
+
+npm install
+npm run build
+
+Output:
+A "build/" folder will be created containing optimized production files.
+
+==================== STEP 2: CONFIGURE ENV VARIABLES ====================
+
+Create a file in frontend root:
+
+.env
+
+Add:
+REACT_APP_API_URL=http://localhost:8080
+
+Use in React code:
+const API = process.env.REACT_APP_API_URL + "/students";
+
+Rebuild after adding env:
+npm run build
+
+==================== STEP 3: SPRING BOOT JAR FILE ====================
+
+Open terminal inside backend folder:
+
+mvn clean package
+
+Output:
+target/appname.jar
+
+==================== STEP 4: RUN BACKEND ====================
+
+Run JAR file:
+
+java -jar target/appname.jar
+
+Check:
+http://localhost:8080/students
+
+If API works → backend is ready
+
+==================== STEP 5: DEPLOY REACT BUILD ====================
+
+OPTION 1: USING SPRING BOOT STATIC FOLDER
+
+1. Copy React build files:
+   build/*
+
+2. Paste into backend:
+   src/main/resources/static/
+
+3. Rebuild backend:
+   mvn clean package
+
+4. Run again:
+   java -jar target/appname.jar
+
+Now open:
+http://localhost:8080
+
+Frontend + Backend working together
+
+-------------------------------------------------------
+
+OPTION 2: USING NGINX (PRODUCTION METHOD)
+
+Install Nginx
+
+Copy React build folder:
+sudo cp -r build/* /var/www/html/
+
+Edit Nginx config:
+sudo nano /etc/nginx/sites-available/default
+
+Add:
+
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root /var/www/html;
+        index index.html;
+        try_files $uri /index.html;
+    }
+
+    location /students {
+        proxy_pass http://localhost:8080;
+    }
+}
+
+Restart:
+sudo systemctl restart nginx
+
+Open:
+http://your-server-ip
+
+-------------------------------------------------------
+
+OPTION 3: USING APACHE
+
+Copy build files:
+sudo cp -r build/* /var/www/html/
+
+Enable rewrite:
+sudo a2enmod rewrite
+
+Restart Apache:
+sudo systemctl restart apache2
+
+==================== STEP 6: TEST APPLICATION ====================
+
+Open browser:
+http://localhost:8080  (Spring Boot)
+OR
+http://server-ip       (Nginx/Apache)
+
+Test:
+✔ Add Student
+✔ Update Student
+✔ Delete Student
+✔ View Students
+
+Ensure:
+✔ API calls working
+✔ No CORS errors
+✔ UI updates correctly
+
+==================== FINAL OUTPUT ====================
+
+✔ React app deployed
+✔ Spring Boot backend running
+✔ Full-stack integration working
+✔ Production-ready setup
+
+=====================================================
